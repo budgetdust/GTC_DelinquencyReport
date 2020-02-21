@@ -1,0 +1,20 @@
+let
+    Source = Excel.Workbook(File.Contents(FilePath&"GTC-IBA and CBA Delinquency.xlsx"), null, true),
+    #"IBA and CBA Delinquency - Hiera_Sheet" = Source{[Item="IBA and CBA Delinquency - Hiera",Kind="Sheet"]}[Data],
+    Column1 = #"IBA and CBA Delinquency - Hiera_Sheet"{3}[Column1],
+    ReportDate = Text.Range(Column1, 19, 10),
+    #"Back to Navigation Step" = #"IBA and CBA Delinquency - Hiera_Sheet",
+    #"Removed Top 5 Rows" = Table.Skip(#"Back to Navigation Step",5),
+    #"Promoted Headers" = Table.PromoteHeaders(#"Removed Top 5 Rows", [PromoteAllScalars=true]),
+    #"Changed Type" = Table.TransformColumnTypes(#"Promoted Headers",{{"Hierarchy Name (Level 5)", type text}, {"Hierarchy Name (Level 6)", type text}, {"Hierarchy Name (Level 7)", type text}, {"Billing Type", type text}, {"Account Number", type text}, {"Account Name", type text}, {"SSN", Int64.Type}, {"Account Status", type text}, {"Column9", type text}, {"Qualifier", type text}, {"Last Payment Date", type date}, {"Payment Due Date", type date}, {"Current Balance", type number}, {"Past Due Amount", type number}, {"Payment Amount CTD", type number}, {"Payment Due Amount", type any}, {"30 Day Past Due", type number}, {"60 Day Past Due", type number}, {"90 Day Past Due", type number}, {"120 Day Past Due", type number}, {"150 Days Past Due", type number}, {"180+ Days Past Due", type number}}),
+    #"Filtered Rows" = Table.SelectRows(#"Changed Type", each ([#"Hierarchy Name (Level 5)"] = "301 FW - CARSWELL AFB")),
+    #"Capitalized Each Word" = Table.TransformColumns(#"Filtered Rows",{{"Account Name", Text.Proper, type text}}),
+    #"Added Group Column" = Table.AddColumn(#"Capitalized Each Word", "Group", each if [#"Hierarchy Name (Level 6)"] = "301 MXG" then "MXG" else if [#"Hierarchy Name (Level 7)"] = "301 MDS" then "MDS" else if [#"Hierarchy Name (Level 6)"] = "301 FW" then "WSA" else if [#"Hierarchy Name (Level 6)"] = "301 MSG" then "MSG" else if [#"Hierarchy Name (Level 6)"] = "44 FG TYNDALL" then "44 FG" else if [#"Hierarchy Name (Level 6)"] = "10 AF STAFF" then "10 AF" else null, type text),
+    #"Added Unit Column" = Table.AddColumn(#"Added Group Column", "Unit", each if [#"Hierarchy Name (Level 7)"] = "301 MXS" then "MXS" else if [#"Hierarchy Name (Level 7)"] = "301 MDS" then "MDS" else if [#"Hierarchy Name (Level 7)"] = "301 LRS" then "LRS" else if [#"Hierarchy Name (Level 7)"] = "44 MXS TYNDALL" then "44 MXS" else if [#"Hierarchy Name (Level 7)"] = "" then "Fix Data" else if [#"Hierarchy Name (Level 7)"] = "301 AMXS" then "AMXS" else if [#"Hierarchy Name (Level 7)"] = "301 SFS" then "SFS" else if [#"Hierarchy Name (Level 7)"] = "301 CES" then "CES" else if [#"Hierarchy Name (Level 7)"] = "301 FSS" then "FSS" else if [#"Hierarchy Name (Level 7)"] = "301 CF" then "COMM" else [#"Hierarchy Name (Level 7)"], type text),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Unit Column",{"Hierarchy Name (Level 5)", "Billing Type", "SSN", "Column9", "Payment Due Amount", "Hierarchy Name (Level 6)", "Hierarchy Name (Level 7)", "Payment Amount CTD"}),
+    #"Reordered Columns" = Table.ReorderColumns(#"Removed Columns",{"Group", "Unit", "Account Number", "Account Name", "Account Status", "Qualifier", "Last Payment Date", "Payment Due Date", "Current Balance", "Past Due Amount", "30 Day Past Due", "60 Day Past Due", "90 Day Past Due", "120 Day Past Due", "150 Days Past Due", "180+ Days Past Due"}),
+    #"Renamed Columns" = Table.RenameColumns(#"Reordered Columns",{{"Account Number", "Account #"}, {"Account Name", "Name"}, {"Account Status", "Open/Closed"}, {"Qualifier", "Status"}, {"30 Day Past Due", "30 Days"}, {"60 Day Past Due", "60 Days"}, {"90 Day Past Due", "90 Days"}, {"120 Day Past Due", "120 Days"}, {"150 Days Past Due", "150 Days"}, {"180+ Days Past Due", "180+ Days"}}),
+    #"Added Refreshed Date Column" = Table.AddColumn(#"Renamed Columns", "Last Refreshed Date", each Text.Start(ReportDate,10)),
+    #"Changed Type Refresh Date" = Table.TransformColumnTypes(#"Added Refreshed Date Column",{{"Last Refreshed Date", type date}})
+in
+    #"Changed Type Refresh Date"
