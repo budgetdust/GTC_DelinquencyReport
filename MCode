@@ -1,5 +1,5 @@
 let
-    Source = Excel.Workbook(File.Contents(FilePath&"GTC-IBA and CBA Delinquency.xlsx"), null, true),
+    Source = Excel.Workbook(File.Contents("INSERT_YOUR_FILEPATH_HERE"), null, true),
     #"IBA and CBA Delinquency - Hiera_Sheet" = Source{[Item="IBA and CBA Delinquency - Hiera",Kind="Sheet"]}[Data],
     Column1 = #"IBA and CBA Delinquency - Hiera_Sheet"{3}[Column1],
     ReportDate = Text.Range(Column1, 19, 10),
